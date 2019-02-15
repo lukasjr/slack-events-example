@@ -3,7 +3,7 @@ const qs = require('querystring');
 
 // eslint-disable-next-line prefer-destructuring
 const VERIFICATION_TOKEN = process.env.VERIFICATION_TOKEN;
-const ACCESS_TOKEN = process.env.BOT_TOKEN;
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
 // Verify Url - https://api.slack.com/events/url_verification
 function verify(token, challenge, callback) {
@@ -49,12 +49,12 @@ function reply(event, callback) {
     // const myJSON = JSON.stringify(attachment);
     const message = {
       statusCode: 200,
-      token: ACCESS_TOKEN,
+      token: BOT_TOKEN,
       channel: event.channel,
       text: botText,
       attachments: JSON.stringify(attachment),
     };
-    // console.log('request: ' + JSON.stringify(message));
+    console.log('request: ' + JSON.stringify(message));
     const query = qs.stringify(message); // prepare the querystring
     https.get(`https://slack.com/api/chat.postMessage?${query}`);
   }
@@ -65,7 +65,7 @@ function reply(event, callback) {
 // Lambda handler
 exports.handler = (data, context, callback) => {
   let body;
-  // console.log(data.body);
+  console.log(data.body);
   if (data.body !== null && data.body !== undefined) {
     body = JSON.parse(data.body);
   }
