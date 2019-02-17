@@ -1,7 +1,5 @@
 const https = require('https');
-const qs = require('querystring');
 
-// eslint-disable-next-line prefer-destructuring
 const VERIFICATION_TOKEN = process.env.VERIFICATION_TOKEN;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -18,10 +16,14 @@ function verify(token, challenge, callback) {
 
 // Post message to Slack - https://api.slack.com/methods/chat.postMessage
 function reply(event, callback) {
+  // send 200 immediately
+  callback(null, { statusCode: 200 });
+
   // check for non-bot message and keywords
   if (!event.subtype && event.type === 'message' && /(aws|lambda)/ig.test(event.text)) {
     const botText = `<@${event.user}> isn't AWS Lambda awesome?`;
-    const attachment = [
+
+    const attachment = JSON.stringify([
       {
         fallback: 'Required plain-text summary of the attachment.',
         color: '#2eb886',
@@ -45,21 +47,48 @@ function reply(event, callback) {
         footer_icon: 'https://platform.slack-edge.com/img/default_application_icon.png',
         ts: 123456789,
       },
-    ];
-    // const myJSON = JSON.stringify(attachment);
-    const message = {
+    ]);
+
+    const message = JSON.stringify({
       statusCode: 200,
       token: BOT_TOKEN,
       channel: event.channel,
       text: botText,
-      attachments: JSON.stringify(attachment),
-    };
-    console.log('request: ' + JSON.stringify(message));
-    const query = qs.stringify(message); // prepare the querystring
-    https.get(`https://slack.com/api/chat.postMessage?${query}`);
-  }
+      attachments: attachment,
+    });
 
-  callback(null, { statusCode: 200 });
+    console.log('request: ' + JSON.stringify(message));
+
+    // HTTP POST request setup
+    const options = {
+      hostname: 'slack.com',
+      port: 443,
+      path: '/api/chat.postMessage',
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${BOT_TOKEN}`,
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': message.length,
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      console.log(`statusCode: ${res.statusCode}`);
+
+      // Slack response output
+      res.on('data', (d) => {
+        process.stdout.write(d);
+      });
+    });
+
+    req.on('error', (error) => {
+      console.error(error);
+    });
+
+    // send HTTP POST with message as the data
+    req.write(message);
+    req.end();
+  }
 }
 
 // Lambda handler
